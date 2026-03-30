@@ -15,21 +15,16 @@ class AuthStack(Stack):
             self,
             "UserPool",
             self_sign_up_enabled=True,
-            sign_in_aliases=cognito.SignInAliases(
-                email=True
-            ),
+            sign_in_aliases=cognito.SignInAliases(email=True),
             standard_attributes=cognito.StandardAttributes(
-                email=cognito.StandardAttribute(
-                    required=True,
-                    mutable=False
-                )
+                email=cognito.StandardAttribute(required=True, mutable=False)
             ),
             password_policy=cognito.PasswordPolicy(
                 min_length=8,
                 require_digits=False,
                 require_lowercase=False,
                 require_symbols=False,
-                require_uppercase=False
+                require_uppercase=False,
             ),
         )
 
@@ -37,7 +32,12 @@ class AuthStack(Stack):
             self,
             "UserPoolClient",
             user_pool=self.user_pool,
-            generate_secret=False
+            generate_secret=False,
+            prevent_user_existence_errors=True,          # ✅ lepsze bezpieczeństwo
+            auth_flows=cognito.AuthFlow(                 # ✅ wymagane dla Amplify
+                user_password=True,
+                user_srp=True,
+            )
         )
 
         # Outputs
@@ -64,4 +64,3 @@ class AuthStack(Stack):
             description="Cognito User Pool Client ID",
             export_name="FeedbackAppClientId",
         )
-

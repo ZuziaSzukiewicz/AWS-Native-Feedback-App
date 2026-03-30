@@ -1,4 +1,3 @@
-
 from aws_cdk import (
     Stack,
     aws_apigateway as apigw,
@@ -36,30 +35,35 @@ class ApiStack(Stack):
             identity_source="method.request.header.Authorization"
         )
 
-        # ========== CORS HELPER ==========
+        # ========== CORS ==========
+
         def add_cors_options(api_resource):
             api_resource.add_method(
                 "OPTIONS",
                 apigw.MockIntegration(
-                    integration_responses=[apigw.IntegrationResponse(
-                        status_code="200",
-                        response_parameters={
-                            "method.response.header.Access-Control-Allow-Headers": "'*'",
-                            "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
-                            "method.response.header.Access-Control-Allow-Origin": "'*'",
-                        },
-                    )],
+                    integration_responses=[
+                        apigw.IntegrationResponse(
+                            status_code="200",
+                            response_parameters={
+                                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
+                                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                            },
+                        )
+                    ],
                     passthrough_behavior=apigw.PassthroughBehavior.WHEN_NO_MATCH,
                     request_templates={"application/json": "{\"statusCode\": 200}"}
                 ),
-                method_responses=[apigw.MethodResponse(
-                    status_code="200",
-                    response_parameters={
-                        "method.response.header.Access-Control-Allow-Headers": True,
-                        "method.response.header.Access-Control-Allow-Methods": True,
-                        "method.response.header.Access-Control-Allow-Origin": True,
-                    }
-                )]
+                method_responses=[
+                    apigw.MethodResponse(
+                        status_code="200",
+                        response_parameters={
+                            "method.response.header.Access-Control-Allow-Headers": True,
+                            "method.response.header.Access-Control-Allow-Methods": True,
+                            "method.response.header.Access-Control-Allow-Origin": True,
+                        }
+                    )
+                ]
             )
 
         # ========== POST /feedback ==========
@@ -68,7 +72,7 @@ class ApiStack(Stack):
 
         feedback_res.add_method(
             "POST",
-            apigw.LambdaIntegration(submit_feedback_lambda, proxy=True),
+            apigw.LambdaIntegration(submit_feedback_lambda, proxy=True, allow_test_invoke=True),
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=cognito_authorizer,
         )

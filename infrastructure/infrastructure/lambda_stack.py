@@ -1,3 +1,4 @@
+
 from aws_cdk import (
     Stack,
     aws_lambda as lambda_,
@@ -23,14 +24,6 @@ class LambdaStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Lambda Layer for common dependencies (optional - only if layer exists)
-        # lambda_layer = lambda_.LayerVersion(
-        #     self,
-        #     "FeedbackLayer",
-        #     code=lambda_.Code.from_asset("./backend/layers/python/lib/python3.11/site-packages"),
-        #     compatible_runtimes=[lambda_.Runtime.PYTHON_3_11],
-        # )
-
         # ===== SUBMIT FEEDBACK LAMBDA =====
         submit_feedback_lambda = lambda_.Function(
             self,
@@ -46,12 +39,25 @@ class LambdaStack(Stack):
             },
         )
 
-        # Grant SNS publish permission
+        # Allow SNS publish
         submit_feedback_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
                 actions=["sns:Publish"],
                 resources=[sns_topic_arn],
+            )
+        )
+
+        # Allow logs (safe)
+        submit_feedback_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                ],
+                resources=["*"],
             )
         )
 
@@ -70,7 +76,7 @@ class LambdaStack(Stack):
             },
         )
 
-        # Grant DynamoDB put_item permission
+        # Allow DynamoDB writes
         process_feedback_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
@@ -79,7 +85,19 @@ class LambdaStack(Stack):
             )
         )
 
-        # Grant SQS receive/delete message permissions for event source mapping
+        # Allow Bedrock calls
+        process_feedback_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=[
+                    "bedrock:InvokeModel",
+                    "bedrock:InvokeModelWithResponseStream"
+                ],
+                resources=["*"],
+            )
+        )
+
+        # Allow SQS receive/delete/changeVisibility
         process_feedback_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
@@ -87,12 +105,13 @@ class LambdaStack(Stack):
                     "sqs:ReceiveMessage",
                     "sqs:DeleteMessage",
                     "sqs:GetQueueAttributes",
+                    "sqs:ChangeMessageVisibility"
                 ],
                 resources=[feedback_queue.queue_arn],
             )
         )
 
-        # Connect SQS queue as event source
+        # Connect SQS as event source
         process_feedback_lambda.add_event_source(
             SqsEventSource(
                 queue=feedback_queue,
@@ -116,7 +135,7 @@ class LambdaStack(Stack):
             },
         )
 
-        # Grant DynamoDB get_item permission
+        # Allow DynamoDB reads
         get_recommendation_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
@@ -150,7 +169,7 @@ class LambdaStack(Stack):
             export_name="FeedbackAppGetRecommendationFunctionArn",
         )
 
-        # Store lambda functions as properties for use in other stacks
+        # Expose lambdas to other stacks
         self.submit_feedback_lambda = submit_feedback_lambda
         self.process_feedback_lambda = process_feedback_lambda
         self.get_recommendation_lambda = get_recommendation_lambda

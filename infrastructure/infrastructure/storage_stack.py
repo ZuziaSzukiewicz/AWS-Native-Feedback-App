@@ -12,16 +12,20 @@ class StorageStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # DynamoDB Table for Recommendations
+
         self.recommendations_table = dynamodb.Table(
             self,
             "RecommendationsTable",
             table_name="feedback-app-recommendations",
-            partition_key=dynamodb.Attribute(name="feedbackId", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="userId", type=dynamodb.AttributeType.STRING),
+            partition_key=dynamodb.Attribute(
+                name="feedbackId",
+                type=dynamodb.AttributeType.STRING
+            ),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
             removal_policy=RemovalPolicy.RETAIN,
             point_in_time_recovery=True,
         )
+
 
         # Global Secondary Index for querying by userId
         self.recommendations_table.add_global_secondary_index(

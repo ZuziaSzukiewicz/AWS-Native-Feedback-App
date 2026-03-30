@@ -1,13 +1,9 @@
 
 import React, { useState } from "react";
 import { withAuthenticator } from "@aws-amplify/ui-react";
-import { Amplify } from "aws-amplify";
 import { get, post } from "aws-amplify/api";
 import { fetchAuthSession } from "aws-amplify/auth";
-import awsExports from "./aws-exports";
 import "./App.css";
-
-Amplify.configure(awsExports);
 
 function App() {
   const [feedbackText, setFeedbackText] = useState("");
@@ -28,29 +24,33 @@ function App() {
     setResponseText("");
 
     try {
-      // ✅ Pobranie tokenu z Cognito
       const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
-      console.log("TOKEN:", token);
+      const token = session.tokens?.idToken?.toString();
 
       const response = await post({
         apiName: API_NAME,
         path: "/feedback",
         options: {
           headers: {
-            Authorization: token,  // ✅ BARDZO WAŻNE
+            Authorization: `Bearer ${token}`,
           },
-          body: { text: feedbackText.trim() },
+          body: {
+            text: feedbackText.trim(),
+          },
         },
       }).response;
 
-      const data = await response.json();
+      const data = response.body; 
 
-      setFeedbackId(data.feedbackId);
+      if (!data || !data.feedbackId) {
+        throw new Error("Backend returned empty feedbackId");
+      }
+
+      setFeedbackId(data.feedbackId); // ✅ zapisz ID
       setResponseText(`✅ Feedback submitted!\nFeedback ID: ${data.feedbackId}`);
     } catch (err) {
       console.error("POST error:", err);
-      setResponseText(`❌ Error: ${err.message}`);
+      setResponseText(`❌ Error: ${err.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ function App() {
 
   // ✅ GET /recommendation
   const getRecommendation = async () => {
-    if (!feedbackId.trim()) {
+    if (!feedbackId || feedbackId.trim() === "") {
       setResponseText("❌ Missing feedback ID");
       return;
     }
@@ -67,26 +67,29 @@ function App() {
     setResponseText("");
 
     try {
-      // ✅ Pobieramy JWT
       const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
+      const token = session.tokens?.idToken?.toString();
+
+      const safeId = encodeURIComponent(feedbackId.trim()); // ✅ zabezpieczenie przed "undefined"
 
       const response = await get({
         apiName: API_NAME,
-        path: `/recommendation?feedbackId=${feedbackId.trim()}`,
+        path: `/recommendation?feedbackId=${safeId}`,
         options: {
           headers: {
-            Authorization: token,  // ✅ bardzo ważne
+            Authorization: `Bearer ${token}`,
           },
         },
       }).response;
 
-      const data = await response.json();
+      const data = response.body;
 
-      setResponseText(`✅ Recommendation:\n${JSON.stringify(data, null, 2)}`);
+      setResponseText(
+        `✅ Recommendation:\n${JSON.stringify(data, null, 2)}`
+      );
     } catch (err) {
       console.error("GET error:", err);
-      setResponseText(`❌ Error: ${err.message}`);
+      setResponseText(`❌ Error: ${err.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -99,11 +102,12 @@ function App() {
       </header>
 
       <main className="App-main">
+
         {/* POST */}
         <div className="test-section">
           <h2>🧪 Test POST /feedback</h2>
           <textarea
-            value={feedbackText}
+            value={feedbackText || ""}
             onChange={(e) => setFeedbackText(e.target.value)}
             placeholder="Enter your feedback..."
             rows={3}
@@ -117,7 +121,7 @@ function App() {
         <div className="test-section">
           <h2>🧪 Test GET /recommendation</h2>
           <input
-            value={feedbackId}
+            value={feedbackId || ""}
             onChange={(e) => setFeedbackId(e.target.value)}
             placeholder="Feedback ID"
           />
@@ -131,6 +135,7 @@ function App() {
           <h3>📋 Response</h3>
           <pre>{responseText || "Responses will appear here..."}</pre>
         </div>
+
       </main>
     </div>
   );

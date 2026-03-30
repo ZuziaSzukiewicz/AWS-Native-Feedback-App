@@ -21,12 +21,12 @@ class AsyncStack(Stack):
             display_name="Feedback App Events",
         )
 
-        # SQS Queue for async processing (subscribed to SNS)
+        # SQS Queue for async processing
         self.feedback_queue = sqs.Queue(
             self,
             "FeedbackQueue",
             queue_name="feedback-app-queue",
-            visibility_timeout=Duration.seconds(300),
+            visibility_timeout=Duration.seconds(300),  # MUST be > lambda processing time
             retention_period=Duration.days(14),
             dead_letter_queue=sqs.DeadLetterQueue(
                 max_receive_count=3,
@@ -38,9 +38,12 @@ class AsyncStack(Stack):
             ),
         )
 
-        # Subscribe SQS queue to SNS topic
+        # Subscribe SQS queue to SNS topic (with RAW DELIVERY)
         self.feedback_topic.add_subscription(
-            sns_subscriptions.SqsSubscription(self.feedback_queue)
+            sns_subscriptions.SqsSubscription(
+                self.feedback_queue,
+                raw_message_delivery=True   # ✅ simplified SQS payload
+            )
         )
 
         # Outputs
