@@ -27,6 +27,10 @@ function App() {
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
 
+      if (!token) {
+        throw new Error("Please log in first");
+      }
+
       const response = await post({
         apiName: API_NAME,
         path: "/feedback",
@@ -40,14 +44,26 @@ function App() {
         },
       }).response;
 
-      const data = response.body; 
+      console.log('Response status:', response.statusCode);
+      console.log('Response body:', response.body);
+      let data;
+      if (response.body instanceof ReadableStream) {
+        const text = await response.body.text();
+        console.log('Response text:', text);
+        data = JSON.parse(text);
+      } else if (typeof response.body === 'string') {
+        data = JSON.parse(response.body);
+      } else {
+        data = response.body;
+      }
+      console.log('Parsed data:', data);
 
       if (!data || !data.feedbackId) {
-        throw new Error("Backend returned empty feedbackId");
+        throw new Error(data?.message || "Backend returned empty feedbackId");
       }
 
       setFeedbackId(data.feedbackId); // ✅ zapisz ID
-      setResponseText(`✅ Feedback submitted!\nFeedback ID: ${data.feedbackId}`);
+      setResponseText(`✅ Feedback submitted!\nFeedback ID: ${data.feedbackId}\n\n⏳ Processing your feedback...`);
     } catch (err) {
       console.error("POST error:", err);
       setResponseText(`❌ Error: ${err.message || "Unknown error"}`);
@@ -57,7 +73,7 @@ function App() {
   };
 
   // ✅ GET /recommendation
-  const getRecommendation = async () => {
+  const getRecommendation = async (retryCount = 0) => {
     if (!feedbackId || feedbackId.trim() === "") {
       setResponseText("❌ Missing feedback ID");
       return;
@@ -69,6 +85,10 @@ function App() {
     try {
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
+
+      if (!token) {
+        throw new Error("Please log in first");
+      }
 
       const safeId = encodeURIComponent(feedbackId.trim()); // ✅ zabezpieczenie przed "undefined"
 
@@ -82,16 +102,35 @@ function App() {
         },
       }).response;
 
-      const data = response.body;
+      let data;
+      if (response.body instanceof ReadableStream) {
+        const text = await response.body.text();
+        data = JSON.parse(text);
+      } else if (typeof response.body === 'string') {
+        data = JSON.parse(response.body);
+      } else {
+        data = response.body;
+      }
 
       setResponseText(
         `✅ Recommendation:\n${JSON.stringify(data, null, 2)}`
       );
     } catch (err) {
       console.error("GET error:", err);
+      
+      // If it's a 404 and we haven't retried too many times, wait and retry
+      if (err.message && err.message.includes("Recommendation not found") && retryCount < 5) {
+        setResponseText(`⏳ Processing feedback... (attempt ${retryCount + 1}/5)`);
+        setLoading(false);
+        setTimeout(() => getRecommendation(retryCount + 1), 2000); // Wait 2 seconds before retry
+        return;
+      }
+      
       setResponseText(`❌ Error: ${err.message || "Unknown error"}`);
     } finally {
-      setLoading(false);
+      if (retryCount >= 5) {
+        setLoading(false);
+      }
     }
   };
 

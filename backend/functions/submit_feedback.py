@@ -18,7 +18,7 @@ CORS_HEADERS = {
 }
 
 def lambda_handler(event, context):
-    print("DEBUG: submit_feedback called")
+    logger.info("submit_feedback invoked")
 
     if not SNS_TOPIC_ARN:
         return {
@@ -54,7 +54,7 @@ def lambda_handler(event, context):
         }
 
     except Exception as exc:
-        print("ERROR:", exc)
+        logger.exception("Unexpected error")
         return {
             "statusCode": 500,
             "headers": CORS_HEADERS,

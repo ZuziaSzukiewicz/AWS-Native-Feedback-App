@@ -13,23 +13,57 @@ logger.setLevel(logging.INFO)
 TABLE_NAME = os.environ.get("RECOMMENDATIONS_TABLE_NAME")
 
 dynamodb = boto3.resource("dynamodb")
+bedrock_client = boto3.client("bedrock-runtime")
 
 
 def _extract_sns_message(record: Dict[str, Any]) -> Dict[str, Any]:
-    # SQS event from SNS delivery includes a JSON string in body with 'Message' field
-    body = json.loads(record.get("body", "{}"))
-    message = body.get("Message")
-    if message:
-        message = json.loads(message)
-    else:
-        message = json.loads(record.get("body", "{}"))
-    return message
+    # With raw message delivery, SQS body is directly the SNS message body
+    return json.loads(record.get("body", "{}"))
 
 
 def _generate_recommendation_text(feedback_text: str) -> str:
-    # Placeholder logic: Replace with Amazon Bedrock call or smarter NLP
-    summary = feedback_text.strip()[:300]
-    return f"Suggested improvement: please clarify and focus on the core ask. Source: {summary}"
+    prompt = (
+        "Analyze the following user feedback and provide specific, actionable "
+        "improvement suggestions. Keep the response concise.\n\n"
+        f"Feedback: {feedback_text}"
+    )
+
+    body = json.dumps({
+        "prompt": prompt,
+        "max_tokens": 300,
+        "temperature": 0.5,
+        "top_p": 0.9
+    })
+
+    try:
+        response = bedrock_client.invoke_model(
+            modelId="mistral.mistral-large-2402-v1:0",
+            body=body,
+            contentType="application/json",
+            accept="application/json"
+        )
+
+        response_body = json.loads(response["body"].read())
+
+        generated_text = (
+            response_body
+            .get("outputs", [{}])[0]
+            .get("text", "")
+            .strip()
+        )
+
+        return (
+            generated_text
+            if generated_text
+            else "No specific suggestions available."
+        )
+
+    except Exception as e:
+        logger.exception("Bedrock Mistral error")
+        return (
+            "Unable to generate recommendation at this time. "
+            "Please try again later."
+        )
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
