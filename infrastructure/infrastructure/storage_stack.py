@@ -12,7 +12,6 @@ class StorageStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # DynamoDB Table for Recommendations
-
         self.recommendations_table = dynamodb.Table(
             self,
             "RecommendationsTable",

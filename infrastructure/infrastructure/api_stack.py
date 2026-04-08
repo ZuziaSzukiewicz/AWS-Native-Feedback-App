@@ -20,14 +20,14 @@ class ApiStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # ✅ REST API
+        #REST API
         self.api = apigw.RestApi(
             self,
             "FeedbackRestApi",
             rest_api_name="FeedbackRestApi",
         )
 
-        # ✅ Cognito Authorizer
+        #Cognito Authorizer
         cognito_authorizer = apigw.CognitoUserPoolsAuthorizer(
             self,
             "FeedbackAuthorizer",
@@ -35,7 +35,7 @@ class ApiStack(Stack):
             identity_source="method.request.header.Authorization"
         )
 
-        # ========== CORS ==========
+        #CORS 
 
         def add_cors_options(api_resource):
             api_resource.add_method(
@@ -66,7 +66,7 @@ class ApiStack(Stack):
                 ]
             )
 
-        # ========== POST /feedback ==========
+        #POST/feedback 
         feedback_res = self.api.root.add_resource("feedback")
         add_cors_options(feedback_res)
 
@@ -77,7 +77,7 @@ class ApiStack(Stack):
             authorizer=cognito_authorizer,
         )
 
-        # ========== GET /recommendation ==========
+        #GET/recommendation 
         rec_res = self.api.root.add_resource("recommendation")
         add_cors_options(rec_res)
 

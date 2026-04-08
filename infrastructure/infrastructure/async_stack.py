@@ -38,11 +38,11 @@ class AsyncStack(Stack):
             ),
         )
 
-        # Subscribe SQS queue to SNS topic (with RAW DELIVERY)
+        # Subscribe SQS queue to SNS topic
         self.feedback_topic.add_subscription(
             sns_subscriptions.SqsSubscription(
                 self.feedback_queue,
-                raw_message_delivery=True   # ✅ simplified SQS payload
+                raw_message_delivery=True
             )
         )
 

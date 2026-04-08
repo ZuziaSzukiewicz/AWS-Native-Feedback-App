@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { withAuthenticator } from "@aws-amplify/ui-react";
 import { get, post } from "aws-amplify/api";
@@ -13,7 +12,7 @@ function App() {
 
   const API_NAME = "feedbackApi";
 
-  // ✅ POST /feedback
+  //POST /feedback
   const sendFeedback = async () => {
     if (!feedbackText.trim()) {
       setResponseText("❌ Please enter feedback text");
@@ -62,7 +61,7 @@ function App() {
         throw new Error(data?.message || "Backend returned empty feedbackId");
       }
 
-      setFeedbackId(data.feedbackId); // ✅ zapisz ID
+      setFeedbackId(data.feedbackId);
       setResponseText(`✅ Feedback submitted!\nFeedback ID: ${data.feedbackId}\n\n⏳ Processing your feedback...`);
     } catch (err) {
       console.error("POST error:", err);
@@ -72,7 +71,7 @@ function App() {
     }
   };
 
-  // ✅ GET /recommendation
+  //GET /recommendation
   const getRecommendation = async (retryCount = 0) => {
     if (!feedbackId || feedbackId.trim() === "") {
       setResponseText("❌ Missing feedback ID");
@@ -90,8 +89,7 @@ function App() {
         throw new Error("Please log in first");
       }
 
-      const safeId = encodeURIComponent(feedbackId.trim()); // ✅ zabezpieczenie przed "undefined"
-
+      const safeId = encodeURIComponent(feedbackId.trim());
       const response = await get({
         apiName: API_NAME,
         path: `/recommendation?feedbackId=${safeId}`,
@@ -113,16 +111,15 @@ function App() {
       }
 
       setResponseText(
-        `✅ Recommendation:\n${JSON.stringify(data, null, 2)}`
+        `✅ Recommendation:\n\n"${data.recommendation}"\n\n📝 Based on your feedback: "${data.sourceText}"\n🆔 Feedback ID: ${data.feedbackId}\n👤 User: ${data.userId}\n📅 Updated: ${new Date(data.updatedAt).toLocaleString()}`
       );
     } catch (err) {
       console.error("GET error:", err);
       
-      // If it's a 404 and we haven't retried too many times, wait and retry
       if (err.message && err.message.includes("Recommendation not found") && retryCount < 5) {
         setResponseText(`⏳ Processing feedback... (attempt ${retryCount + 1}/5)`);
         setLoading(false);
-        setTimeout(() => getRecommendation(retryCount + 1), 2000); // Wait 2 seconds before retry
+        setTimeout(() => getRecommendation(retryCount + 1), 2000);
         return;
       }
       
@@ -145,13 +142,17 @@ function App() {
         {/* POST */}
         <div className="test-section">
           <h2>🧪 Test POST /feedback</h2>
-          <textarea
-            value={feedbackText || ""}
-            onChange={(e) => setFeedbackText(e.target.value)}
-            placeholder="Enter your feedback..."
-            rows={3}
-          />
-          <button onClick={sendFeedback} disabled={loading}>
+          <div className="input-group">
+            <label htmlFor="feedback-text">Feedback Text:</label>
+            <textarea
+              id="feedback-text"
+              value={feedbackText || ""}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="Enter your feedback..."
+              rows={3}
+            />
+          </div>
+          <button onClick={sendFeedback} disabled={loading} className="submit-btn">
             {loading ? "Submitting..." : "Submit Feedback"}
           </button>
         </div>
@@ -159,12 +160,16 @@ function App() {
         {/* GET */}
         <div className="test-section">
           <h2>🧪 Test GET /recommendation</h2>
-          <input
-            value={feedbackId || ""}
-            onChange={(e) => setFeedbackId(e.target.value)}
-            placeholder="Feedback ID"
-          />
-          <button onClick={getRecommendation} disabled={loading}>
+          <div className="input-group">
+            <label htmlFor="feedback-id">Feedback ID:</label>
+            <input
+              id="feedback-id"
+              value={feedbackId || ""}
+              onChange={(e) => setFeedbackId(e.target.value)}
+              placeholder="Feedback ID"
+            />
+          </div>
+          <button onClick={getRecommendation} disabled={loading} className="get-btn">
             {loading ? "Loading..." : "Get Recommendation"}
           </button>
         </div>
@@ -172,7 +177,7 @@ function App() {
         {/* RESPONSE */}
         <div className="response-section">
           <h3>📋 Response</h3>
-          <pre>{responseText || "Responses will appear here..."}</pre>
+          <div className="response-output">{responseText || "Responses will appear here..."}</div>
         </div>
 
       </main>

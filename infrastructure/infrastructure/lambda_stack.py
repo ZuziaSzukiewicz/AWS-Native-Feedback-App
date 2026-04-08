@@ -24,7 +24,7 @@ class LambdaStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # ===== SUBMIT FEEDBACK LAMBDA =====
+        #SUBMIT FEEDBACK LAMBDA
         submit_feedback_lambda = lambda_.Function(
             self,
             "SubmitFeedbackFunction",
@@ -39,7 +39,7 @@ class LambdaStack(Stack):
             },
         )
 
-        # Allow SNS publish
+        #Allow SNS publish
         submit_feedback_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
@@ -48,7 +48,7 @@ class LambdaStack(Stack):
             )
         )
 
-        # Allow logs (safe)
+        #Allow logs
         submit_feedback_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
@@ -61,7 +61,7 @@ class LambdaStack(Stack):
             )
         )
 
-        # ===== PROCESS FEEDBACK LAMBDA =====
+        #PROCESS FEEDBACK LAMBDA
         process_feedback_lambda = lambda_.Function(
             self,
             "ProcessFeedbackFunction",
@@ -91,7 +91,8 @@ class LambdaStack(Stack):
                 effect=iam.Effect.ALLOW,
                 actions=[
                     "bedrock:InvokeModel",
-                    "bedrock:InvokeModelWithResponseStream"
+                    "bedrock:InvokeModelWithResponseStream",
+                    "bedrock:ListFoundationModels"
                 ],
                 resources=["*"],
             )
@@ -120,7 +121,7 @@ class LambdaStack(Stack):
             )
         )
 
-        # ===== GET RECOMMENDATION LAMBDA =====
+        #GET RECOMMENDATION LAMBDA
         get_recommendation_lambda = lambda_.Function(
             self,
             "GetRecommendationFunction",

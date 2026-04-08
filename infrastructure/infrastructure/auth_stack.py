@@ -33,8 +33,8 @@ class AuthStack(Stack):
             "UserPoolClient",
             user_pool=self.user_pool,
             generate_secret=False,
-            prevent_user_existence_errors=True,          # ✅ lepsze bezpieczeństwo
-            auth_flows=cognito.AuthFlow(                 # ✅ wymagane dla Amplify
+            prevent_user_existence_errors=True,
+            auth_flows=cognito.AuthFlow(
                 user_password=True,
                 user_srp=True,
             )
